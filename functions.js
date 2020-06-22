@@ -51,3 +51,35 @@ function revealedFields() {
     }
     return total
 }
+
+//checks if cell is in list, only checks position
+function cellinList(cell, list) {
+    for (let i = 0; i < list.length; i++) {
+        const cellL = list[i];
+        if (cellL.row == cell.row && cellL.col == cell.col)
+            return true
+    }
+    return false
+}
+
+//checks number of neighbors per cell in two grids
+//grid 2 should be the new to compare grid
+function compareGrids(grid1, grid2, opens) {
+    console.log(opens)
+    for (let c = 0; c < cols; c++) {
+        for (let r = 0; r < rows; r++) {
+
+            let found = false
+            opens.forEach(cel => {
+                if (cel.row == r && cel.col == c)
+                    found = true
+            });
+            if (found)
+                continue
+
+            if (grid1[c][r].neighbors != grid2[c][r].neighbors)
+                return false
+        }
+    }
+    return true;
+}

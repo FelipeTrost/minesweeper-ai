@@ -1,20 +1,26 @@
-const rows = 12
-const cols = 12
+const rows = 20
+const cols = 15
 
-const bombsAmount = 30;
-let grid, w;
+const bombsAmount = 50;
+let grid;
+let w = 30;
 
-let gameOver = false
+let gameOver = true
+let aiOn = false
+
+let timeBeginning;
 
 //buttons
-let restartB;
-//bombsRemaining
+let restartB, toggleAI;
+
+//display divs
+let displayDiv, bombsLeftDiv;
 
 function mousePressed() {
     const col = Math.floor(mouseY / (height / cols))
     const row = Math.floor(mouseX / (width / rows))
 
-    if (col > cols - 1 || row > rows - 1)
+    if (col > cols - 1 || row > rows - 1 || col < 0 || row < 0)
         return false
 
     if (mouseButton === RIGHT)
@@ -24,30 +30,85 @@ function mousePressed() {
 }
 
 function callReveal(c, r) {
-    if (grid[c][r].reveal() == 'mine') {
+    let result = grid[c][r].reveal()
+
+    if (result == "mine") {
+        grid[c][r].wall = [255, 100, 100]
         for (let c = 0; c < cols; c++) {
             for (let r = 0; r < rows; r++) {
                 grid[c][r].revealed = true;
             }
         }
+
         gameOver = true
+        // alert("Not every AI is perfect :(")
     }
+    return result
 }
 
-function setup() {
-    createCanvas(500, 500);
+function checkWin() {
+    const disabled = disabledFields();
+    let mines = bombsAmount - disabled;
 
-    //Restart variables
+    let checkDisabled = true;
+    let unrevealeddAreMines = true;
+    for (let c = 0; c < cols; c++) {
+        for (let r = 0; r < rows; r++) {
+            const cell = grid[c][r]
+            if (cell.disabled && !cell.mine)
+                checkDisabled = false
+            if (!cell.disabled && !cell.revealed && !cell.mine)
+                unrevealeddAreMines = false
+        }
+    }
+
+    if ((mines == 0 && checkDisabled) || unrevealeddAreMines) {
+        for (let c = 0; c < cols; c++) {
+            for (let r = 0; r < rows; r++) {
+                grid[c][r].wall = [230, 255, 230]
+                grid[c][r].revealed = true
+            }
+        }
+        console.log("---------------------------")
+        console.log("Victory!")
+        console.log("---------------------------")
+
+        gameOver = true;
+    }
+    return mines;
+}
+
+//Separate function to set up canvas, for the reset button
+function start() {
     gameOver = false;
-    if (restartB)
-        restartB.remove()
-    restartB = undefined;
-
     //width for all rectangles
     w = height / cols;
 
     //populates global grid variable with grid
     getGrid()
+
+    timeBeginning = new Date()
+}
+
+async function setup() {
+    createCanvas(rows * w, cols * w);
+
+    //Restart button
+    restartB = createButton('Restart');
+    // restartB.position(19, 19);
+    restartB.mousePressed(start);
+    //AI button
+    toggleAI = createButton(aiOn ? "Turn AI Off" : "Turn AI On");
+    toggleAI.mousePressed(() => {
+        aiOn = !aiOn;
+        toggleAI.html(aiOn ? "Turn AI Off" : "Turn AI On");
+    })
+
+    //divs
+    bombsLeftDiv = createDiv("Bombs left:")
+    displayDiv = createDiv("0")
+
+    start()
 }
 
 function draw() {
@@ -60,10 +121,18 @@ function draw() {
         }
     }
 
-    if (gameOver && !restartB) {
-        restartB = createButton('Restart');
-        restartB.position(19, 19);
-        restartB.mousePressed(setup);
+    if (!gameOver) {
+        //update divs
+        bombsLeftDiv.html("Bombs left: " + checkWin().toString())
+        displayDiv.html("Time: " + Math.floor((new Date() - timeBeginning) / 100) / 10)
+
+
+        //Run AI
+        if (aiOn && !aiMove() && !aiMoveCSP()) {
+            pickRandomCell();
+            console.log("totally random")
+        }
     }
+
 
 }
