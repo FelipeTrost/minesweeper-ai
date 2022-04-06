@@ -1,12 +1,15 @@
-const rows = 20
-const cols = 15
+const rows = 16;
+const cols = 16;
 
-const bombsAmount = 50;
+// const bombsAmount = Math.floor(rows * cols * 0.2);
+const bombsAmount = 40;
+
 let grid;
-let w = 30;
+let cellWidth = 30;
 
-let gameOver = true
-let aiOn = false
+let gameOver = true;
+let win;
+let aiOn = false;
 
 let timeBeginning;
 
@@ -14,125 +17,129 @@ let timeBeginning;
 let restartB, toggleAI;
 
 //display divs
-let displayDiv, bombsLeftDiv;
+let displayDiv;
+let bombsLeftDiv = document.querySelector("#bombCount");
 
 function mousePressed() {
-    const col = Math.floor(mouseY / (height / cols))
-    const row = Math.floor(mouseX / (width / rows))
+  const col = Math.floor(mouseY / (height / cols));
+  const row = Math.floor(mouseX / (width / rows));
 
-    if (col > cols - 1 || row > rows - 1 || col < 0 || row < 0)
-        return false
+  if (col > cols - 1 || row > rows - 1 || col < 0 || row < 0) return false;
 
-    if (mouseButton === RIGHT)
-        grid[col][row].disable();
-    else
-        callReveal(col, row)
+  if (mouseButton === RIGHT) grid[col][row].disable();
+  else callReveal(col, row);
 }
 
 function callReveal(c, r) {
-    let result = grid[c][r].reveal()
+  let result = grid[c][r].reveal();
 
-    if (result == "mine") {
-        grid[c][r].wall = [255, 100, 100]
-        for (let c = 0; c < cols; c++) {
-            for (let r = 0; r < rows; r++) {
-                grid[c][r].revealed = true;
-            }
-        }
+  if (result == "mine") {
+    grid[c][r].wall = [255, 255, 0];
+    grid[c][r].show();
 
-        gameOver = true
-        // alert("Not every AI is perfect :(")
+    grid[c][r].wall = [255, 100, 100];
+    for (let c = 0; c < cols; c++) {
+      for (let r = 0; r < rows; r++) {
+        grid[c][r].revealed = true;
+      }
     }
-    return result
+
+    win = false;
+    gameOver = true;
+  }
+  return result;
 }
 
 function checkWin() {
-    const disabled = disabledFields();
-    let mines = bombsAmount - disabled;
+  let unRevealed = 0;
 
-    let checkDisabled = true;
-    let unrevealeddAreMines = true;
+  for (let c = 0; c < cols; c++) {
+    for (let r = 0; r < rows; r++) {
+      const cell = grid[c][r];
+      unRevealed += !cell.revealed;
+    }
+  }
+
+  if (unRevealed == bombsAmount) {
     for (let c = 0; c < cols; c++) {
-        for (let r = 0; r < rows; r++) {
-            const cell = grid[c][r]
-            if (cell.disabled && !cell.mine)
-                checkDisabled = false
-            if (!cell.disabled && !cell.revealed && !cell.mine)
-                unrevealeddAreMines = false
-        }
+      for (let r = 0; r < rows; r++) {
+        grid[c][r].wall = [230, 255, 230];
+        grid[c][r].revealed = true;
+      }
     }
 
-    if ((mines == 0 && checkDisabled) || unrevealeddAreMines) {
-        for (let c = 0; c < cols; c++) {
-            for (let r = 0; r < rows; r++) {
-                grid[c][r].wall = [230, 255, 230]
-                grid[c][r].revealed = true
-            }
-        }
-        console.log("---------------------------")
-        console.log("Victory!")
-        console.log("---------------------------")
-
-        gameOver = true;
-    }
-    return mines;
+    win = true;
+    gameOver = true;
+  }
 }
 
 //Separate function to set up canvas, for the reset button
 function start() {
-    gameOver = false;
-    //width for all rectangles
-    w = height / cols;
+  gameOver = false;
 
-    //populates global grid variable with grid
-    getGrid()
+  //populates global grid variable with grid
+  getGrid();
 
-    timeBeginning = new Date()
+  // timeBeginning = new Date();
+  loop();
 }
 
-async function setup() {
-    createCanvas(rows * w, cols * w);
+function setup() {
+  let canvas = createCanvas(rows * cellWidth, cols * cellWidth);
+  canvas.parent("canvas");
 
-    //Restart button
-    restartB = createButton('Restart');
-    // restartB.position(19, 19);
-    restartB.mousePressed(start);
-    //AI button
-    toggleAI = createButton(aiOn ? "Turn AI Off" : "Turn AI On");
-    toggleAI.mousePressed(() => {
-        aiOn = !aiOn;
-        toggleAI.html(aiOn ? "Turn AI Off" : "Turn AI On");
-    })
+  frameRate(10);
 
-    //divs
-    bombsLeftDiv = createDiv("Bombs left:")
-    displayDiv = createDiv("0")
+  //Restart button
+  restartB = createButton("Restart");
+  restartB.mousePressed(start);
 
-    start()
+  //AI button
+  toggleAI = createButton(aiOn ? "Turn AI Off" : "Turn AI On");
+  toggleAI.mousePressed(() => {
+    aiOn = !aiOn;
+    toggleAI.html(aiOn ? "Turn AI Off" : "Turn AI On");
+  });
+
+  //divs
+  // displayDiv = createDiv("0");
+
+  start();
 }
 
 function draw() {
-    background(255);
+  background(255);
 
-    //show all cells
-    for (let c = 0; c < cols; c++) {
-        for (let r = 0; r < rows; r++) {
-            grid[c][r].show()
-        }
+  //show all cells
+  for (let c = 0; c < cols; c++) {
+    for (let r = 0; r < rows; r++) {
+      grid[c][r].show();
+    }
+  }
+
+  if (!gameOver) {
+    //update divs
+    // bombsLeftDiv.html(`Bombs left: ${bombsAmount - disabledFields()}`);
+    // displayDiv.html(
+    //   "Time: " + Math.floor((new Date() - timeBeginning) / 100) / 10
+    // );
+    bombsLeftDiv.innerText = `Bombs left: ${bombsAmount - disabledFields()}`;
+
+    const gs = getDisjunctGroups();
+    // console.log(gs);
+    for (const g of gs) {
+      for (tile of g.tiles) tile.show([255, 0, 0]);
+      for (tile of g.responsible) tile.show([0, 255, 255]);
     }
 
-    if (!gameOver) {
-        //update divs
-        bombsLeftDiv.html("Bombs left: " + checkWin().toString())
-        displayDiv.html("Time: " + Math.floor((new Date() - timeBeginning) / 100) / 10)
+    //Run AI
+    if (aiOn) console.log(aiMove());
 
-
-        //Run AI
-        if (aiOn && !aiMove() && !aiMoveCSP()) {
-            pickRandomCell();
-            console.log("totally random")
-        }
-    }
-
-
+    checkWin();
+  } else {
+    noLoop();
+    if (!win && aiOn) alert("not every ai is perfect :(");
+    else if (!win) alert("Booom");
+    else alert("You won");
+  }
 }

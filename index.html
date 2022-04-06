@@ -1,20 +1,44 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <title>p5</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@300&display=swap"
+      rel="stylesheet"
+    />
 
-<head>
-  <meta charset="utf-8">
-  <title>p5</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
 
-<body>
+  <body>
+    <h1 class="title">Minesweeper solver</h1>
+    <p>
+      Hey, this is my attempt to code a Minesweeper solver. I just look each
+      cell individually and apply very simple logic, if that doesn't work, I
+      identify disjoint groups of tiles (with
+      <a href="https://en.wikipedia.org/wiki/Disjoint-set_data_structure"
+        >Union Find</a
+      >
+      a data structure I find pretty cool) and use a backtracking algorithm to
+      find a plausible solution, since there are more than one and there can
+      only be one correct solution this doesn't always get it right. Finally if
+      nothing else works we just pick a random tile.
+    </p>
 
-  <script src="https://cdn.jsdelivr.net/npm/p5@1.0.0/lib/p5.js"></script>
-  <script src="cell.js"></script>
-  <script src="ai.js"></script>
-  <script src="functions.js"></script>
-  <script src="sketch.js"></script>
+    <p>(Right click to flag mine)</p>
 
-</body>
+    <span id="bombCount"></span>
 
+    <div id="canvas" oncontextmenu="return false;"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.0.0/lib/p5.js"></script>
+    <script src="unionFind.js"></script>
+    <script src="cell.js"></script>
+    <script src="ai.js"></script>
+    <script src="functions.js"></script>
+    <script src="sketch.js"></script>
+  </body>
 </html>
