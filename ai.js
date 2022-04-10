@@ -1,48 +1,51 @@
-function aiMove() {
-  if (singlePoint()) return "singlePoint";
+function aiMove(board) {
+  if (singlePoint(board)) return "singlePoint";
 
-  if (startBacktracking()) return "backtracking";
+  if (startBacktracking(board)) return "backtracking";
 
   // If we get to here we'rej just going to have to reveal a random tile
-  pickRandomCell();
+  pickRandomCell(board);
   return "random";
 }
 
 // SINGLE POINT APPROACH
 // This is a simple and very straight forward approach, we just go cell to cell
-function singlePoint() {
+function singlePoint(board) {
   let didSomething = false;
 
-  for (let c = 0; c < cols; c++) {
-    for (let r = 0; r < rows; r++) {
-      if (singlePointUtil(grid[c][r])) didSomething = true;
-    }
+  for (const tile of board.tiles) {
+    if (singlePointUtil(board, tile)) didSomething = true;
   }
 
   return didSomething;
 }
 
-function singlePointUtil(cell) {
+function singlePointUtil(board, tile) {
   //skip cell if it is already revealed or disabled
-  if (!cell.revealed || cell.disabled || cell.neighbors === 0) return false;
+  const state = tile.state;
+  if (
+    state !== states.revealed ||
+    (state === states.revealed && !tile.minesNear)
+  )
+    return false;
 
-  let minesLeft = cell.neighbors;
-  let unknownCells = [];
+  let minesLeft = tile.minesNear;
+  let unknownTiles = [];
 
-  cell.callOnNeighbors((neighborCell) => {
-    if (neighborCell.disabled) minesLeft--;
-    else if (!neighborCell.revealed) unknownCells.push(neighborCell);
-  }, grid);
+  for (const neighbor of tile.neighbors) {
+    if (neighbor.state === states.disabled) minesLeft--;
+    else if (neighbor.state === states.none) unknownTiles.push(neighbor);
+  }
 
   let didSomething = false;
 
-  if (minesLeft !== 0 && minesLeft == unknownCells.length) {
-    unknownCells.forEach((c) => c.disable(true));
+  if (minesLeft !== 0 && minesLeft === unknownTiles.length) {
+    unknownTiles.forEach((neighbor) => board.toggleDisable(neighbor));
     didSomething = true;
   }
 
-  if (minesLeft == 0 && unknownCells.length !== 0) {
-    unknownCells.forEach((c) => callReveal(c.col, c.row));
+  if (minesLeft === 0 && unknownTiles.length !== 0) {
+    unknownTiles.forEach((neighbor) => board.reveal(neighbor));
     didSomething = true;
   }
 
@@ -55,9 +58,9 @@ function singlePointUtil(cell) {
 
 const BACKTRACKING_CUTOFF = 20; //So that we don't do massive trees
 
-function startBacktracking() {
+function startBacktracking(board) {
   // TODO: we don't necessarely need to compute this every time
-  const groups = getDisjunctGroups();
+  const groups = getDisjunctGroups(board);
 
   // for (const group of groups) {
   //   const configuration = Array(group.tiles.length);
@@ -79,40 +82,39 @@ function startBacktracking() {
   for (const targetGroup of sorted) {
     const configuration = Array(targetGroup.tiles.length).fill(0);
 
+    if (!backtracking(board, targetGroup, configuration)) continue;
+
     // If we found a valid configuration we use it
-    if (backtracking(targetGroup, configuration)) {
-      for (const i in targetGroup.tiles) {
-        const tile = targetGroup.tiles[i];
+    for (let i = 0; i < targetGroup.tiles.length; i++) {
+      const tile = targetGroup.tiles[i];
 
-        if (!configuration[i]) {
-          callReveal(tile.col, tile.row);
-        } else {
-          tile.disable(true);
-        }
+      if (!configuration[i]) {
+        board.reveal(tile);
+      } else {
+        board.toggleDisable(tile);
       }
-
-      return true;
     }
+
+    return true;
   }
 
   return false;
 }
 
-function backtracking(group, configuration, index = 0) {
-  const bombsLeft = bombsAmount - disabledFields();
+function backtracking(board, group, configuration, index = 0) {
   const configurationBombs = configuration.reduce((a, b) => a + b);
 
-  if (index >= configuration.length || configurationBombs >= bombsLeft) {
+  if (index >= configuration.length || configurationBombs >= board.minesLeft) {
     return checkConfiguration(group, configuration);
   }
 
   //put 0 in index position
   configuration[index] = 0;
-  if (backtracking(group, configuration, index + 1)) return true;
+  if (backtracking(board, group, configuration, index + 1)) return true;
 
   //if none of the combinations that follow work, we try 1
   configuration[index] = 1;
-  return backtracking(group, configuration, index + 1);
+  return backtracking(board, group, configuration, index + 1);
 }
 
 function checkConfiguration({ tiles, responsible }, configuration) {
@@ -122,13 +124,13 @@ function checkConfiguration({ tiles, responsible }, configuration) {
   for (const i in tiles) tileMap.set(tiles[i], i);
 
   for (const tile of responsible) {
-    let minesLeft = tile.neighbors;
+    let minesLeft = tile.minesNear;
 
-    tile.callOnNeighbors((neighbor) => {
+    for (const neighbor of tile.neighbors) {
       if (tileMap.has(neighbor))
         minesLeft -= configuration[tileMap.get(neighbor)];
       else if (neighbor.disabled) minesLeft -= 1;
-    }, grid);
+    }
 
     if (minesLeft != 0) return false;
   }
@@ -136,19 +138,15 @@ function checkConfiguration({ tiles, responsible }, configuration) {
   return true;
 }
 
-function getDisjunctGroups() {
-  const union = new UnionFind(grid, cols, rows);
+function getDisjunctGroups(boardInstance) {
+  const union = new UnionFind(boardInstance);
 
-  for (let c = 0; c < cols; c++) {
-    for (let r = 0; r < rows; r++) {
-      const cell = grid[c][r];
-
-      if (cell.revealed && cell.neighbors != 0) {
-        cell.callOnNeighbors((neighbor) => {
-          if (!neighbor.revealed && !neighbor.disabled) {
-            union.join(neighbor, cell, true);
-          }
-        }, grid);
+  for (const tile of boardInstance.tiles) {
+    if (tile.state === states.revealed && tile.minesNear !== 0) {
+      for (const neighbor of tile.neighbors) {
+        if (neighbor.state == states.none) {
+          union.join(neighbor, tile);
+        }
       }
     }
   }
@@ -158,15 +156,22 @@ function getDisjunctGroups() {
 
 // RANDOM SECTION
 // this is what we do when we don't know what to do
-function pickRandomCell() {
-  let openSpots = [];
-  for (let i = 0; i < grid.length; i++) {
-    for (let z = 0; z < grid[i].length; z++) {
-      const cell = grid[i][z];
-      if (!cell.disabled && !cell.revealed) openSpots = [...openSpots, cell];
+function pickRandomCell(board) {
+  const corners = [
+    board.toTile(0, 0),
+    board.toTile(0, board.rows - 1),
+    board.toTile(board.cols - 1, 0),
+    board.toTile(board.cols - 1, board.cols - 1),
+  ];
+
+  for (const corner of corners) {
+    if (corner.state === states.none) {
+      board.reveal(corner);
+      return;
     }
   }
 
-  const pick = openSpots[Math.floor(Math.random() * openSpots.length)];
-  if (pick) callReveal(pick.col, pick.row);
+  const openTiles = board.tiles.filter((tile) => tile.state === states.none);
+  const randomIndex = Math.floor(Math.random() * openTiles.length);
+  board.reveal(openTiles[randomIndex]);
 }
