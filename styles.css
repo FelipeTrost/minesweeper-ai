@@ -17,3 +17,9 @@ p{
 span{
   padding: 1000px 0;
 }
+
+.container{
+  width: 80%;
+  max-width: 800px;
+  margin: auto;
+}

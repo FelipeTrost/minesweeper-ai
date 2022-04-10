@@ -161,7 +161,7 @@ function pickRandomCell(board) {
     board.toTile(0, 0),
     board.toTile(0, board.rows - 1),
     board.toTile(board.cols - 1, 0),
-    board.toTile(board.cols - 1, board.cols - 1),
+    board.toTile(board.cols - 1, board.rows - 1),
   ];
 
   for (const corner of corners) {

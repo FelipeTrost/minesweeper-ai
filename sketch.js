@@ -6,12 +6,19 @@ const bombsAmount = 40;
 
 let cellWidth = 30;
 
-//buttons
-let restartB, toggleAI;
-
 //display divs
 let displayDiv;
-let bombsLeftDiv = document.querySelector("#bombCount");
+const bombsLeftDiv = document.querySelector("#bombCount");
+const restartB = document.querySelector("#restart");
+const toggleAI = document.querySelector("#toggleAi");
+const aiStep = document.querySelector("#aiStep");
+
+restartB.addEventListener(
+  "click",
+  () => (board = new Board(cols, rows, bombsAmount))
+);
+toggleAI.addEventListener("click", () => (board.ai = !board.ai));
+aiStep.addEventListener("click", () => aiMove(board));
 
 let board = new Board(cols, rows, bombsAmount);
 
@@ -31,17 +38,6 @@ function setup() {
   canvas.parent("canvas");
 
   frameRate(10);
-
-  //Restart button
-  const restartB = createButton("Restart");
-  restartB.mousePressed(() => (board = new Board(cols, rows, bombsAmount)));
-
-  //AI buttons
-  const toggleAI = createButton("Toggle ai");
-  toggleAI.mousePressed(() => (board.ai = !board.ai));
-
-  const aiStep = createButton("Ai step");
-  aiStep.mousePressed(() => aiMove(board));
 }
 
 function draw() {
